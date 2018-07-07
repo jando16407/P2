@@ -8,17 +8,12 @@
 #include <vector>       // For storing matricies
 
 // Function prototypes
-double calculateDeterminant(std::vector<std::vector<int>> inputMatrix, int matrixSize, std::map<std::string,int> &determinantStore);
-
+double calculateDeterminant(std::vector<std::vector<int>> inputMatrix, int matrixSize, std::map<std::vector<std::vector<int>>, double> &determinantStore);
 std::vector<std::vector<int>> generateSubmatrix(std::vector<std::vector<int>> inputMatrix, int matrixSize, int removeRow, int removeColumn);
-
 std::vector<std::vector<int>> readFileMatrix();
-
 void writeResult(double computedDeterminant);
 
-
-
-
+// Main application
 int main() {
 
     // Read the input file and store the generated matrix
@@ -28,7 +23,7 @@ int main() {
 
     // Create a map to store the results of previously computed
     // determinants for sub-matrices
-    std::map<std::string, int> calculatedDeterminants;
+    std::map<std::vector<std::vector<int>>, double> calculatedDeterminants;
 
     // Calculate the determinant of the input matrix
     double finalDeterminant = calculateDeterminant(inputMatrix, matrixSize, calculatedDeterminants);
@@ -50,59 +45,118 @@ int main() {
  * @input   std::map<std::string, int>&     determinantStore
  * @returns double  The determinant of the input matrix.       
  */
-double calculateDeterminant(std::vector<std::vector<int>> inputMatrix, int matrixSize, std::map<std::string,int> &determinantStore) {
+double calculateDeterminant(std::vector<std::vector<int>> inputMatrix, int matrixSize, std::map<std::vector<std::vector<int>>, double> &determinantStore) {
 
     // Handle provided base cases where the matrix size
     // is either 1 x 1, 2 x 2, or 3 x 3
     if (matrixSize == 1) return inputMatrix[0][0];
     else if (matrixSize == 2) return (inputMatrix[0][0] * inputMatrix[1][1]) - (inputMatrix[0][1] * (inputMatrix[1][0]));
     else if (matrixSize == 3) return (inputMatrix[0][0] * inputMatrix[1][1] * inputMatrix[2][2]) - (inputMatrix[0][0] * inputMatrix[1][2] * inputMatrix[2][1]) - (inputMatrix[0][1] * inputMatrix[1][0] * inputMatrix[2][2]) + (inputMatrix[0][1] * inputMatrix[1][2] * inputMatrix[2][0]) + (inputMatrix[0][2] * inputMatrix[1][0] * inputMatrix[2][1]) - (inputMatrix[0][2] * inputMatrix[1][1] * inputMatrix[2][0]);
+    else if (determinantStore.find(inputMatrix) != determinantStore.end()) {
+        // std::cout << "Cache hit for master" << std::endl;
+        return determinantStore.at(inputMatrix);
+    }
 
     // Otherwise, prepare to compute the determinant
     else {
 
-        // Calculate det(M:1..1)
-        double numeratorDet1 = calculateDeterminant(
-            generateSubmatrix(inputMatrix, matrixSize, 0, 0),
-            matrixSize - 1,
-            determinantStore
-        );
-
-        // Calculate det(M:n..n)
-        double numeratorDet2 = calculateDeterminant(
-            generateSubmatrix(inputMatrix, matrixSize, matrixSize-1, matrixSize-1),
-            matrixSize - 1,
-            determinantStore
-        );
-        
-        // Calculate det(M:n..1)
-        double numeratorDet3 = calculateDeterminant(
-            generateSubmatrix(inputMatrix, matrixSize, 0, matrixSize-1),
-            matrixSize - 1,
-            determinantStore
-        );
-        
-        // Calculate det(M:1..n)
-        double numeratorDet4 = calculateDeterminant(
-            generateSubmatrix(inputMatrix, matrixSize, matrixSize-1, 0),
-            matrixSize - 1,
-            determinantStore
-        );
-
-        // Calculate det(M:1..1,n..n)
-        double denominatorDet = calculateDeterminant(
-            generateSubmatrix(
-                generateSubmatrix(
-                    inputMatrix,
-                    matrixSize,
-                    0, 0
-                ),
+        // Memoization wrapper
+        std::vector<std::vector<int>> numeratorDet1Submatrix = generateSubmatrix(inputMatrix, matrixSize, 0, 0);
+        double numeratorDet1;
+        // Check if the determinant for the submatrix has already been calculated
+        if (determinantStore.find(numeratorDet1Submatrix) == determinantStore.end()) {
+            // Calculate det(M:1..1)
+            numeratorDet1 = calculateDeterminant(
+                numeratorDet1Submatrix,
                 matrixSize - 1,
-                matrixSize - 2, matrixSize - 2
+                determinantStore
+            );
+            // Store the calculated determinant away for later use
+            determinantStore.insert(std::pair<std::vector<std::vector<int>>, double>(numeratorDet1Submatrix, numeratorDet1));
+        } else {
+            // std::cout << "Cache hit for determinant 1" << std::endl;
+            numeratorDet1 = determinantStore.at(numeratorDet1Submatrix);  
+        }
+
+        // Memoization wrapper
+        std::vector<std::vector<int>> numeratorDet2Submatrix = generateSubmatrix(inputMatrix, matrixSize, matrixSize-1, matrixSize-1);
+        double numeratorDet2;
+        // Check if the determinant for the submatrix has already been calculated
+        if (determinantStore.find(numeratorDet2Submatrix) == determinantStore.end()) {
+            // Calculate det(M:n..n)
+            numeratorDet2 = calculateDeterminant(
+                numeratorDet2Submatrix,
+                matrixSize - 1,
+                determinantStore
+            );
+            // Store the calculated determinant away for later use
+            determinantStore.insert(std::pair<std::vector<std::vector<int>>, double>(numeratorDet2Submatrix, numeratorDet2));
+        } else {
+            // std::cout << "Cache hit for determinant 2" << std::endl;
+            numeratorDet2 = determinantStore.at(numeratorDet2Submatrix);
+        }
+        
+        // Memoization wrapper
+        std::vector<std::vector<int>> numeratorDet3Submatrix = generateSubmatrix(inputMatrix, matrixSize, 0, matrixSize-1);
+        double numeratorDet3;
+        // Check if the determinant for the submatrix has already been calculated
+        if (determinantStore.find(numeratorDet3Submatrix) == determinantStore.end()) {
+            // Calculate det(M:n..1)
+            numeratorDet3 = calculateDeterminant(
+                numeratorDet3Submatrix,
+                matrixSize - 1,
+                determinantStore
+            );
+            // Store the calculated determinant away for later use
+            determinantStore.insert(std::pair<std::vector<std::vector<int>>, double>(numeratorDet3Submatrix, numeratorDet3));
+        } else {
+            // std::cout << "Cache hit for determinant 3" << std::endl;
+            numeratorDet3 = determinantStore.at(numeratorDet3Submatrix);
+        }
+        
+        // Memoization wrapper
+        std::vector<std::vector<int>> numeratorDet4Submatrix = generateSubmatrix(inputMatrix, matrixSize, matrixSize-1, 0);
+        double numeratorDet4;
+        // Check if the determinant for the submatrix has already been calculated
+        if (determinantStore.find(numeratorDet4Submatrix) == determinantStore.end()) {
+            // Calculate det(M:1..n)
+            numeratorDet4 = calculateDeterminant(
+                numeratorDet4Submatrix,
+                matrixSize - 1,
+                determinantStore
+            );
+            // Store the calculated determinant away for later use
+            determinantStore.insert(std::pair<std::vector<std::vector<int>>, double>(numeratorDet4Submatrix, numeratorDet4));
+        } else {
+            // std::cout << "Cache hit for determinant 4" << std::endl;
+            numeratorDet4 = determinantStore.at(numeratorDet4Submatrix);
+        }
+
+        // Memoization wrapper
+        std::vector<std::vector<int>> denominatorDetSubmatrix = generateSubmatrix(
+            generateSubmatrix(
+                inputMatrix,
+                matrixSize,
+                0, 0
             ),
-            matrixSize - 2,
-            determinantStore
+            matrixSize - 1,
+            matrixSize - 2, matrixSize - 2
         );
+        double denominatorDet;
+        // Check if the determinant for the submatrix has already been calculated
+        if (determinantStore.find(denominatorDetSubmatrix) == determinantStore.end()) {
+            // Calculate det(M:1..1,n..n)
+            denominatorDet = calculateDeterminant(
+                denominatorDetSubmatrix,
+                matrixSize - 2,
+                determinantStore
+            );
+            // Store the calculated determinant away for later use
+            determinantStore.insert(std::pair<std::vector<std::vector<int>>, double>(denominatorDetSubmatrix, denominatorDet));   
+        } else {
+            // std::cout << "Cache hit for determinant denominator" << std::endl;
+            denominatorDet = determinantStore.at(denominatorDetSubmatrix);
+        }
 
         // Return the computed determinant
         return ((numeratorDet1 * numeratorDet2) - (numeratorDet3 * numeratorDet4)) / denominatorDet;
