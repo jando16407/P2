@@ -1,15 +1,19 @@
-#include <fstream>      // File manipulation
-#include <iostream>     // Input and output
-#include <map>          // For storing computed determinant results
-#include <sstream>      // String steam for reading file contents
-#include <stdio.h>      // Standart input and output
-#include <stdlib.h>     // Standard library
-#include <string>       // String related functions
-#include <vector>       // For storing matricies
+#include <fstream>          // File manipulation
+#include <iostream>         // Input and output
+#include <sstream>          // String steam for reading file contents
+#include <stdio.h>          // Standart input and output
+#include <stdlib.h>         // Standard library
+#include <string>           // String related functions
+#include <vector>           // For storing matricies
+#include <unordered_map>    // HashTable
 
 // Function prototypes
-double calculateDeterminant(std::vector<std::vector<int>> inputMatrix, int matrixSize, std::map<std::vector<std::vector<int>>, double> &determinantStore);
-std::vector<std::vector<int>> generateSubmatrix(std::vector<std::vector<int>> inputMatrix, int matrixSize, int removeRow, int removeColumn);
+double calculateDeterminant(
+    std::vector<std::vector<int>> inputMatrix, 
+    int rowStartIndex, int rowEndIndex, int colStartIndex, int colEndIndex, 
+    std::unordered_map<std::string, double> &determinantStore
+);
+std::string hashFunction(int rowStart, int rowEnd, int colStart, int colEnd);
 std::vector<std::vector<int>> readFileMatrix();
 void writeResult(double computedDeterminant);
 
@@ -21,12 +25,16 @@ int main() {
     std::vector<std::vector<int>> inputMatrix = readFileMatrix();
     int matrixSize = inputMatrix.size();
 
-    // Create a map to store the results of previously computed
-    // determinants for sub-matrices
-    std::map<std::vector<std::vector<int>>, double> calculatedDeterminants;
+    // HashTable for storage
+    std::unordered_map<std::string, double> determinantStore;
 
     // Calculate the determinant of the input matrix
-    double finalDeterminant = calculateDeterminant(inputMatrix, matrixSize, calculatedDeterminants);
+    double finalDeterminant = calculateDeterminant(
+        inputMatrix,
+        0, matrixSize - 1,
+        0, matrixSize - 1,
+        determinantStore
+    );
 
     // Write the computed determinant to the output file
     writeResult(finalDeterminant);
@@ -36,183 +44,139 @@ int main() {
 
 }
 
-/* Function: Calculate the Determinant
- * Description: The function calculates the determinant of the
- *              specified input n x n matrix and stores the re-
- *              sults of computed determinants in the input map.
- * @input   std::vector<std::vector<int>>   inputMatrix
- * @input   int                             matrixSize
- * @input   std::map<std::string, int>&     determinantStore
- * @returns double  The determinant of the input matrix.       
+/* Function: Calculate Determinant
+ * Description: Calculates the determinant for the submatrix of the inputMatrix
+ *              starting at rowStartIndex and colStartIndex, and ending at
+ *              rowEndIndex and colEndIndex
+ * 
+ * @input   std::vector<std::vector<int>> inputMatrix   The matrix generated from input.txt
+ * @input   int rowStartIndex   The index at which rows start for the submatrix 
+ * @input   int rowEndIndex     The index at which rows end for the submatrix
+ * @input   int colStartIndex   The index at which columns start for the submatrix
+ * @input   int colEndIndex     The index at which columns end for the submatrix
+ * @input   std::unordered_map<std::string, double> &determinantStore   The (HashTable) storage for calculated determinants 
+ * @returns double  The calculated determinant       
  */
-double calculateDeterminant(std::vector<std::vector<int>> inputMatrix, int matrixSize, std::map<std::vector<std::vector<int>>, double> &determinantStore) {
+double calculateDeterminant(std::vector<std::vector<int>> inputMatrix, 
+    int rowStartIndex, 
+    int rowEndIndex,
+    int colStartIndex,
+    int colEndIndex,
+    std::unordered_map<std::string, double> &determinantStore
+    ) {
+    
+    // Compute the size of the matrix
+    int matrixSize = (rowEndIndex - rowStartIndex) + 1;
+    // Stores a generated hash
+    std::string generated_hash;
 
-    // Handle provided base cases where the matrix size
-    // is either 1 x 1, 2 x 2, or 3 x 3
-    if (matrixSize == 1) return inputMatrix[0][0];
-    else if (matrixSize == 2) return (inputMatrix[0][0] * inputMatrix[1][1]) - (inputMatrix[0][1] * (inputMatrix[1][0]));
-    else if (matrixSize == 3) return (inputMatrix[0][0] * inputMatrix[1][1] * inputMatrix[2][2]) - (inputMatrix[0][0] * inputMatrix[1][2] * inputMatrix[2][1]) - (inputMatrix[0][1] * inputMatrix[1][0] * inputMatrix[2][2]) + (inputMatrix[0][1] * inputMatrix[1][2] * inputMatrix[2][0]) + (inputMatrix[0][2] * inputMatrix[1][0] * inputMatrix[2][1]) - (inputMatrix[0][2] * inputMatrix[1][1] * inputMatrix[2][0]);
-    else if (determinantStore.find(inputMatrix) != determinantStore.end()) {
-        // std::cout << "Cache hit for master" << std::endl;
-        return determinantStore.at(inputMatrix);
+    // Base cases
+    if (matrixSize == 1) return inputMatrix[rowStartIndex][colStartIndex];
+    if (matrixSize == 2) return (inputMatrix[rowStartIndex][colStartIndex] * inputMatrix[rowEndIndex][colEndIndex]) - 
+        (inputMatrix[rowStartIndex][colEndIndex] * inputMatrix[rowEndIndex][colStartIndex]);
+    
+    // Check if the hash table has a copy of the determinant
+    std::unordered_map<std::string, double>::const_iterator hash = 
+        determinantStore.find(hashFunction(rowStartIndex, rowEndIndex, colStartIndex, colEndIndex));
+    // If it is found, return the stored determinant
+    if (hash != determinantStore.end()){
+        // std::cout << "Cache hit for " << hash->first << " at main" << std::endl;
+        return hash->second;
+    } 
+
+    // Calculate the determinant of M(1..1)
+    double numDet1;
+    // Check if the hash table has a copy of the determinant
+    hash = determinantStore.find(hashFunction(rowStartIndex + 1, rowEndIndex, colStartIndex + 1, colEndIndex));
+    if (hash != determinantStore.end()){
+        numDet1 = hash->second;
+        // std::cout << "Cache hit for " << hash->first << " at numDet1" << std::endl;
     }
-
-    // Otherwise, prepare to compute the determinant
+    // Otherwise we need to calculate it from scratch
     else {
-
-        // Memoization wrapper
-        std::vector<std::vector<int>> numeratorDet1Submatrix = generateSubmatrix(inputMatrix, matrixSize, 0, 0);
-        double numeratorDet1;
-        // Check if the determinant for the submatrix has already been calculated
-        if (determinantStore.find(numeratorDet1Submatrix) == determinantStore.end()) {
-            // Calculate det(M:1..1)
-            numeratorDet1 = calculateDeterminant(
-                numeratorDet1Submatrix,
-                matrixSize - 1,
-                determinantStore
-            );
-            // Store the calculated determinant away for later use
-            determinantStore.insert(std::pair<std::vector<std::vector<int>>, double>(numeratorDet1Submatrix, numeratorDet1));
-        } else {
-            // std::cout << "Cache hit for determinant 1" << std::endl;
-            numeratorDet1 = determinantStore.at(numeratorDet1Submatrix);  
-        }
-
-        // Memoization wrapper
-        std::vector<std::vector<int>> numeratorDet2Submatrix = generateSubmatrix(inputMatrix, matrixSize, matrixSize-1, matrixSize-1);
-        double numeratorDet2;
-        // Check if the determinant for the submatrix has already been calculated
-        if (determinantStore.find(numeratorDet2Submatrix) == determinantStore.end()) {
-            // Calculate det(M:n..n)
-            numeratorDet2 = calculateDeterminant(
-                numeratorDet2Submatrix,
-                matrixSize - 1,
-                determinantStore
-            );
-            // Store the calculated determinant away for later use
-            determinantStore.insert(std::pair<std::vector<std::vector<int>>, double>(numeratorDet2Submatrix, numeratorDet2));
-        } else {
-            // std::cout << "Cache hit for determinant 2" << std::endl;
-            numeratorDet2 = determinantStore.at(numeratorDet2Submatrix);
-        }
-        
-        // Memoization wrapper
-        std::vector<std::vector<int>> numeratorDet3Submatrix = generateSubmatrix(inputMatrix, matrixSize, 0, matrixSize-1);
-        double numeratorDet3;
-        // Check if the determinant for the submatrix has already been calculated
-        if (determinantStore.find(numeratorDet3Submatrix) == determinantStore.end()) {
-            // Calculate det(M:n..1)
-            numeratorDet3 = calculateDeterminant(
-                numeratorDet3Submatrix,
-                matrixSize - 1,
-                determinantStore
-            );
-            // Store the calculated determinant away for later use
-            determinantStore.insert(std::pair<std::vector<std::vector<int>>, double>(numeratorDet3Submatrix, numeratorDet3));
-        } else {
-            // std::cout << "Cache hit for determinant 3" << std::endl;
-            numeratorDet3 = determinantStore.at(numeratorDet3Submatrix);
-        }
-        
-        // Memoization wrapper
-        std::vector<std::vector<int>> numeratorDet4Submatrix = generateSubmatrix(inputMatrix, matrixSize, matrixSize-1, 0);
-        double numeratorDet4;
-        // Check if the determinant for the submatrix has already been calculated
-        if (determinantStore.find(numeratorDet4Submatrix) == determinantStore.end()) {
-            // Calculate det(M:1..n)
-            numeratorDet4 = calculateDeterminant(
-                numeratorDet4Submatrix,
-                matrixSize - 1,
-                determinantStore
-            );
-            // Store the calculated determinant away for later use
-            determinantStore.insert(std::pair<std::vector<std::vector<int>>, double>(numeratorDet4Submatrix, numeratorDet4));
-        } else {
-            // std::cout << "Cache hit for determinant 4" << std::endl;
-            numeratorDet4 = determinantStore.at(numeratorDet4Submatrix);
-        }
-
-        // Memoization wrapper
-        std::vector<std::vector<int>> denominatorDetSubmatrix = generateSubmatrix(
-            generateSubmatrix(
-                inputMatrix,
-                matrixSize,
-                0, 0
-            ),
-            matrixSize - 1,
-            matrixSize - 2, matrixSize - 2
-        );
-        double denominatorDet;
-        // Check if the determinant for the submatrix has already been calculated
-        if (determinantStore.find(denominatorDetSubmatrix) == determinantStore.end()) {
-            // Calculate det(M:1..1,n..n)
-            denominatorDet = calculateDeterminant(
-                denominatorDetSubmatrix,
-                matrixSize - 2,
-                determinantStore
-            );
-            // Store the calculated determinant away for later use
-            determinantStore.insert(std::pair<std::vector<std::vector<int>>, double>(denominatorDetSubmatrix, denominatorDet));   
-        } else {
-            // std::cout << "Cache hit for determinant denominator" << std::endl;
-            denominatorDet = determinantStore.at(denominatorDetSubmatrix);
-        }
-
-        // Return the computed determinant
-        return ((numeratorDet1 * numeratorDet2) - (numeratorDet3 * numeratorDet4)) / denominatorDet;
-
+        numDet1 = calculateDeterminant(inputMatrix, rowStartIndex + 1, rowEndIndex, colStartIndex + 1, colEndIndex, determinantStore);
+        generated_hash = hashFunction(rowStartIndex + 1, rowEndIndex, colStartIndex + 1, colEndIndex);
+        determinantStore[generated_hash] = numDet1;
+        // std::cout << "Cache STORE for " << generated_hash << " at numDet1" << std::endl;
+    }
+    
+    // Calculate the determinant of M(n..n)
+    double numDet2;
+    // Check if the hash table has a copy of the determinant
+    hash = determinantStore.find(hashFunction(rowStartIndex, rowEndIndex - 1, colStartIndex, colEndIndex - 1));
+    if (hash != determinantStore.end()){
+        numDet2 = hash->second;
+        // std::cout << "Cache hit for " << hash->first << " at numDet2" << std::endl;
+    }
+    // Otherwise we need to calculate it from scratch
+    else {
+        numDet2 = calculateDeterminant(inputMatrix, rowStartIndex, rowEndIndex - 1, colStartIndex, colEndIndex - 1, determinantStore);
+        generated_hash = hashFunction(rowStartIndex, rowEndIndex - 1, colStartIndex, colEndIndex - 1);
+        determinantStore[generated_hash] = numDet2;
+        // std::cout << "Cache STORE for " << generated_hash << " at numDet2" << std::endl;
+    }
+    
+    // Calculate the determinant of M(n..1)
+    double numDet3;
+    // Check if the hash table has a copy of the determinant
+    hash = determinantStore.find(hashFunction(rowStartIndex + 1, rowEndIndex, colStartIndex, colEndIndex - 1));
+    if (hash != determinantStore.end()){
+        numDet3 = hash->second;
+        // std::cout << "Cache hit for " << hash->first << " at numDet3" << std::endl;
+    }
+    // Otherwise we need to calculate it from scratch
+    else {
+        numDet3 = calculateDeterminant(inputMatrix, rowStartIndex + 1, rowEndIndex, colStartIndex, colEndIndex - 1, determinantStore);
+        generated_hash = hashFunction(rowStartIndex + 1, rowEndIndex, colStartIndex, colEndIndex - 1);
+        determinantStore[generated_hash] = numDet3;
+        // std::cout << "Cache STORE for " << generated_hash << " at numDet3" << std::endl;
+    }
+    
+    // Calculate the determinant of M(1..n)
+    double numDet4;
+    // Check if the hash table has a copy of the determinant
+    hash = determinantStore.find(hashFunction(rowStartIndex, rowEndIndex - 1, colStartIndex + 1, colEndIndex));
+    if (hash != determinantStore.end()){
+        numDet4 = hash->second;
+        // std::cout << "Cache hit for " << hash->first << " at numDet4" << std::endl;
+    }
+    // Otherwise we need to calculate it from scratch
+    else {
+        numDet4 = calculateDeterminant(inputMatrix, rowStartIndex, rowEndIndex - 1, colStartIndex + 1, colEndIndex, determinantStore);
+        generated_hash = hashFunction(rowStartIndex, rowEndIndex - 1, colStartIndex + 1, colEndIndex);
+        determinantStore[generated_hash] = numDet4;
+        // std::cout << "Cache STORE for " << generated_hash << " at numDet4" << std::endl;
+    }
+    
+    // Calculate the determinant of M(1..1, n..n)
+    double denDet1;
+    // Check if the hash table has a copy of the determinant
+    hash = determinantStore.find(hashFunction(rowStartIndex + 1, rowEndIndex - 1, colStartIndex + 1, colEndIndex - 1));
+    if (hash != determinantStore.end()){
+        denDet1 = hash->second;
+        // std::cout << "Cache hit for " << hash->first << " at denDet1" << std::endl;
+    }
+    // Otherwise we need to calculate it from scratch
+    else {
+        denDet1 = calculateDeterminant(inputMatrix, rowStartIndex + 1, rowEndIndex - 1, colStartIndex + 1, colEndIndex - 1, determinantStore);
+        generated_hash = hashFunction(rowStartIndex + 1, rowEndIndex - 1, colStartIndex + 1, colEndIndex - 1);
+        determinantStore[generated_hash] = denDet1;
+        // std::cout << "Cache STORE for " << generated_hash << " at denDet1" << std::endl;
     }
 
-}
-
-/* Function: Generate Specified Submatrix
- * Description: The function removes the specified row and column
- *              from the input matrix, and then returns the resulting
- *              matrix.
- * @input   std::vector<std::vector<int>>   inputMatrix
- * @input   int                             matrixSize
- * @input   int                             removeRow
- * @input   int                             removeColumn
- * @returns std::vector<std::vector<int>>   The generated submatrix.       
- */
-std::vector<std::vector<int>> generateSubmatrix(std::vector<std::vector<int>> inputMatrix, int matrixSize, int removeRow, int removeColumn) {
-
-    // Store the resulting matrix after the specified
-    // row and column are removed
-    std::vector<std::vector<int>> generatedSubmatrix;
-
-    // Loop through the rows in the inputMatrix
-    for (int currentRow = 0; currentRow < matrixSize; currentRow++) {
-        // If we are not removing the current row,
-        // Prepare to add it to the generatedSubmatrix
-        if (currentRow != removeRow) {
-            // Storage for row with modified column values
-            std::vector<int> rowVector;
-            // Loop though the elements in the current row
-            for (int currentColumn = 0; currentColumn < matrixSize; currentColumn++) {
-                // If we are not removing the current column,
-                // add it to the rowVector
-                if (currentColumn != removeColumn)
-                    rowVector.push_back(inputMatrix[currentRow][currentColumn]);
-            }
-            // Push the finalized rowVector into the 
-            // generatedSubmatrix
-            generatedSubmatrix.push_back(rowVector);
-        }
-    }
-
-    // Return the generated submatrix
-    return generatedSubmatrix;
-
+    // Return the calculated value
+    return ((numDet1 * numDet2) - (numDet3 * numDet4)) / denDet1;
 }
 
 /* Function: Read File Matrix
  * Description: This function reads the file 'input.txt' and turns the
  *              file contents into a 2D matrix using vectors. 
+ * 
  * @returns std::vector<std::vector<int>>   The generated submatrix.       
  */
 std::vector<std::vector<int>> readFileMatrix() {
-    
+    // Debug message
+    // std::cout << "Reading input file... ";
     // Storage for 2D matrix
     std::vector<std::vector<int>> generatedMatrix;
     int matrixSize;
@@ -256,16 +220,35 @@ std::vector<std::vector<int>> readFileMatrix() {
     // Close the file and return the 
     // generated matrix
     inputFile.close();
+    // Debug message
+    // std::cout << "Done" << std::endl;
+    // Return the generated matrix
     return generatedMatrix;
 
+}
+
+/* Function: Hash Function
+ * Description: A hash function that generates a string key for a
+ *              matrix located at a certain position and is of a 
+ *              certain size
+ * 
+ * @input   int     rowStart    Starting index of the row
+ * @input   int     rowEnd      Ending index of the row
+ * @input   int     colStart    Starting index of the column
+ * @input   int     colEnd      Ending index of the column 
+ * @returns std::string The generated hash key
+ */
+std::string hashFunction(int rowStart, int rowEnd, int colStart, int colEnd) {
+    return std::to_string(rowStart) + std::to_string(rowEnd) + std::to_string(colStart) + std::to_string(colEnd);
 }
 
 /* Function: Write Result
  * Description: This function writes the input to the file 'output.txt'.
  *              The input should be the computed determinant for the 
  *              input matrix.
+ * 
  * @input   int     computedDeterminant 
- * @returns void       
+ * @returns void
  */
 void writeResult(double computedDeterminant) {
     // Output file to store the result
