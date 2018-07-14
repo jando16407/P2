@@ -74,7 +74,7 @@ double calculateDeterminant(std::vector<std::vector<int>> inputMatrix,
     if (matrixSize == 1) return inputMatrix[rowStartIndex][colStartIndex];
     if (matrixSize == 2) return (inputMatrix[rowStartIndex][colStartIndex] * inputMatrix[rowEndIndex][colEndIndex]) - 
         (inputMatrix[rowStartIndex][colEndIndex] * inputMatrix[rowEndIndex][colStartIndex]);
-    
+    if (matrixSize == 3) return (inputMatrix[rowStartIndex][colStartIndex] * inputMatrix[rowStartIndex+1][colStartIndex+1] * inputMatrix[rowEndIndex][colEndIndex]) - (inputMatrix[rowStartIndex][colStartIndex] * inputMatrix[rowStartIndex+1][colEndIndex] * inputMatrix[rowEndIndex][colStartIndex+1]) - (inputMatrix[rowStartIndex][colStartIndex+1] * inputMatrix[rowStartIndex+1][colStartIndex] * inputMatrix[rowEndIndex][colEndIndex]) + (inputMatrix[rowStartIndex][colStartIndex+1] * inputMatrix[rowStartIndex+1][colEndIndex] * inputMatrix[rowEndIndex][colStartIndex]) + (inputMatrix[rowStartIndex][colEndIndex] * inputMatrix[rowStartIndex+1][colStartIndex] * inputMatrix[rowEndIndex][colStartIndex+1]) - (inputMatrix[rowStartIndex][colEndIndex] * inputMatrix[rowStartIndex+1][colStartIndex+1] * inputMatrix[rowEndIndex][colStartIndex]);
     // Check if the hash table has a copy of the determinant
     std::unordered_map<std::string, double>::const_iterator hash = 
         determinantStore.find(hashFunction(rowStartIndex, rowEndIndex, colStartIndex, colEndIndex));
