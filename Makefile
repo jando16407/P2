@@ -16,4 +16,4 @@ $(TARGET): main.cpp
 	$(CXX) $(CXXFLAGS) -o $(TARGET) main.cpp
 
 clean:
-	$(RM) $(TARGET)
+	$(RM) $(TARGET) input.txt output.txt
