@@ -80,7 +80,7 @@ double calculateDeterminant(std::vector<std::vector<int>> inputMatrix,
         determinantStore.find(hashFunction(rowStartIndex, rowEndIndex, colStartIndex, colEndIndex));
     // If it is found, return the stored determinant
     if (hash != determinantStore.end()){
-        std::cout << "Cache hit for " << hash->first << " at main" << std::endl;
+        //std::cout << "Cache hit for " << hash->first << " at main" << std::endl;
         return hash->second;
     } 
 
@@ -90,14 +90,14 @@ double calculateDeterminant(std::vector<std::vector<int>> inputMatrix,
     hash = determinantStore.find(hashFunction(rowStartIndex + 1, rowEndIndex, colStartIndex + 1, colEndIndex));
     if (hash != determinantStore.end()){
         numDet1 = hash->second;
-        std::cout << "Cache hit for " << hash->first << " at numDet1" << std::endl;
+        //std::cout << "Cache hit for " << hash->first << " at numDet1" << std::endl;
     }
     // Otherwise we need to calculate it from scratch
     else {
         numDet1 = calculateDeterminant(inputMatrix, rowStartIndex + 1, rowEndIndex, colStartIndex + 1, colEndIndex, determinantStore);
         generated_hash = hashFunction(rowStartIndex + 1, rowEndIndex, colStartIndex + 1, colEndIndex);
         determinantStore[generated_hash] = numDet1;
-        std::cout << "Cache STORE for " << generated_hash << " at numDet1" << std::endl;
+        //std::cout << "Cache STORE for " << generated_hash << " at numDet1" << std::endl;
     }
     
     // Calculate the determinant of M(n..n)
@@ -106,14 +106,14 @@ double calculateDeterminant(std::vector<std::vector<int>> inputMatrix,
     hash = determinantStore.find(hashFunction(rowStartIndex, rowEndIndex - 1, colStartIndex, colEndIndex - 1));
     if (hash != determinantStore.end()){
         numDet2 = hash->second;
-        std::cout << "Cache hit for " << hash->first << " at numDet2" << std::endl;
+        //std::cout << "Cache hit for " << hash->first << " at numDet2" << std::endl;
     }
     // Otherwise we need to calculate it from scratch
     else {
         numDet2 = calculateDeterminant(inputMatrix, rowStartIndex, rowEndIndex - 1, colStartIndex, colEndIndex - 1, determinantStore);
         generated_hash = hashFunction(rowStartIndex, rowEndIndex - 1, colStartIndex, colEndIndex - 1);
         determinantStore[generated_hash] = numDet2;
-        std::cout << "Cache STORE for " << generated_hash << " at numDet2" << std::endl;
+        //std::cout << "Cache STORE for " << generated_hash << " at numDet2" << std::endl;
     }
     
     // Calculate the determinant of M(n..1)
@@ -122,14 +122,14 @@ double calculateDeterminant(std::vector<std::vector<int>> inputMatrix,
     hash = determinantStore.find(hashFunction(rowStartIndex + 1, rowEndIndex, colStartIndex, colEndIndex - 1));
     if (hash != determinantStore.end()){
         numDet3 = hash->second;
-        std::cout << "Cache hit for " << hash->first << " at numDet3" << std::endl;
+        //std::cout << "Cache hit for " << hash->first << " at numDet3" << std::endl;
     }
     // Otherwise we need to calculate it from scratch
     else {
         numDet3 = calculateDeterminant(inputMatrix, rowStartIndex + 1, rowEndIndex, colStartIndex, colEndIndex - 1, determinantStore);
         generated_hash = hashFunction(rowStartIndex + 1, rowEndIndex, colStartIndex, colEndIndex - 1);
         determinantStore[generated_hash] = numDet3;
-        std::cout << "Cache STORE for " << generated_hash << " at numDet3" << std::endl;
+        //std::cout << "Cache STORE for " << generated_hash << " at numDet3" << std::endl;
     }
     
     // Calculate the determinant of M(1..n)
@@ -138,14 +138,14 @@ double calculateDeterminant(std::vector<std::vector<int>> inputMatrix,
     hash = determinantStore.find(hashFunction(rowStartIndex, rowEndIndex - 1, colStartIndex + 1, colEndIndex));
     if (hash != determinantStore.end()){
         numDet4 = hash->second;
-        std::cout << "Cache hit for " << hash->first << " at numDet4" << std::endl;
+        //std::cout << "Cache hit for " << hash->first << " at numDet4" << std::endl;
     }
     // Otherwise we need to calculate it from scratch
     else {
         numDet4 = calculateDeterminant(inputMatrix, rowStartIndex, rowEndIndex - 1, colStartIndex + 1, colEndIndex, determinantStore);
         generated_hash = hashFunction(rowStartIndex, rowEndIndex - 1, colStartIndex + 1, colEndIndex);
         determinantStore[generated_hash] = numDet4;
-        std::cout << "Cache STORE for " << generated_hash << " at numDet4" << std::endl;
+        //std::cout << "Cache STORE for " << generated_hash << " at numDet4" << std::endl;
     }
     
     // Calculate the determinant of M(1..1, n..n)
@@ -154,14 +154,14 @@ double calculateDeterminant(std::vector<std::vector<int>> inputMatrix,
     hash = determinantStore.find(hashFunction(rowStartIndex + 1, rowEndIndex - 1, colStartIndex + 1, colEndIndex - 1));
     if (hash != determinantStore.end()){
         denDet1 = hash->second;
-        std::cout << "Cache hit for " << hash->first << " at denDet1" << std::endl;
+        //std::cout << "Cache hit for " << hash->first << " at denDet1" << std::endl;
     }
     // Otherwise we need to calculate it from scratch
     else {
         denDet1 = calculateDeterminant(inputMatrix, rowStartIndex + 1, rowEndIndex - 1, colStartIndex + 1, colEndIndex - 1, determinantStore);
         generated_hash = hashFunction(rowStartIndex + 1, rowEndIndex - 1, colStartIndex + 1, colEndIndex - 1);
         determinantStore[generated_hash] = denDet1;
-        std::cout << "Cache STORE for " << generated_hash << " at denDet1" << std::endl;
+        //std::cout << "Cache STORE for " << generated_hash << " at denDet1" << std::endl;
     }
 
     // Return the calculated value
