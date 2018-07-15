@@ -239,7 +239,7 @@ std::vector<std::vector<int>> readFileMatrix() {
  * @returns std::string The generated hash key
  */
 std::string hashFunction(int rowStart, int rowEnd, int colStart, int colEnd) {
-    return std::to_string(rowStart) + " " + std::to_string(rowEnd) + " " + std::to_string(colStart) + " " + std::to_string(colEnd);
+    return std::to_string(static_cast<long long>(rowStart)) + " " + std::to_string(static_cast<long long>(rowEnd)) + " " + std::to_string(static_cast<long long>(colStart)) + " " + std::to_string(static_cast<long long>(colEnd));
 }
 
 /* Function: Write Result
