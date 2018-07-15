@@ -5,7 +5,7 @@ CXX = g++
 ## -g			Debugging enable
 ## -Wall		Shows all warnings
 ## --std=c++11	Compile with C++11 standards
-CXXFLAGS  = -g -Wall --std=c++11
+CXXFLAGS  = -g -Wall --std=c++0x
 
 ## Build target  
 TARGET = det
